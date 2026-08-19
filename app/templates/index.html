@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>SRE Operations Dashboard</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+        }
+
+        header {
+            background: #182433;
+            color: white;
+            padding: 20px 40px;
+        }
+
+        .container {
+            width: 90%;
+            margin: 30px auto;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px
+                rgba(0,0,0,0.1);
+        }
+
+        .healthy {
+            color: green;
+            font-weight: bold;
+        }
+
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+
+        button {
+            border: none;
+            padding: 12px 18px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #0067b8;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.85;
+        }
+
+        #events {
+            background: #111827;
+            color: #d1fae5;
+            padding: 15px;
+            height: 200px;
+            overflow: auto;
+            font-family: monospace;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<header>
+
+    <h1>SRE Operations Dashboard</h1>
+
+    <p>
+        Production Reliability Demonstration
+    </p>
+
+</header>
+
+
+<div class="container">
+
+
+    <div class="grid">
+
+
+        <div class="card">
+
+            <h3>Application Status</h3>
+
+            <p id="status"
+               class="healthy">
+                HEALTHY
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>Environment</h3>
+
+            <p id="environment">
+                Loading...
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>Version</h3>
+
+            <p id="version">
+                Loading...
+            </p>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>Running Instance</h3>
+
+            <p id="hostname">
+                Loading...
+            </p>
+
+        </div>
+
+
+    </div>
+
+
+    <br>
+
+
+    <div class="grid">
+
+
+        <div class="card">
+
+            <h3>Total Requests</h3>
+
+            <h2 id="total">
+                0
+            </h2>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>Successful</h3>
+
+            <h2 id="success">
+                0
+            </h2>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>Failed</h3>
+
+            <h2 id="failed">
+                0
+            </h2>
+
+        </div>
+
+
+        <div class="card">
+
+            <h3>Uptime</h3>
+
+            <h2 id="uptime">
+                0
+            </h2>
+
+        </div>
+
+
+    </div>
+
+
+    <br>
+
+
+    <div class="card">
+
+        <h3>SRE Failure & Load Testing</h3>
+
+
+        <button onclick="normalRequest()">
+
+            Generate Request
+
+        </button>
+
+
+        <button onclick="errorRequest()">
+
+            Simulate Error
+
+        </button>
+
+
+        <button onclick="slowRequest()">
+
+            Simulate Slow Request
+
+        </button>
+
+    </div>
+
+
+    <br>
+
+
+    <div class="card">
+
+        <h3>Latest Application Events</h3>
+
+        <div id="events"></div>
+
+    </div>
+
+
+</div>
+
+
+<script>
+
+
+function addEvent(message) {
+
+    const events =
+        document.getElementById("events");
+
+    const timestamp =
+        new Date().toLocaleTimeString();
+
+    events.innerHTML =
+        timestamp +
+        " | " +
+        message +
+        "<br>" +
+        events.innerHTML;
+
+}
+
+
+async function updateStatus() {
+
+    try {
+
+        const response =
+            await fetch("/api/status");
+
+        const data =
+            await response.json();
+
+
+        document.getElementById(
+            "status"
+        ).innerText =
+            data.status.toUpperCase();
+
+
+        document.getElementById(
+            "environment"
+        ).innerText =
+            data.environment;
+
+
+        document.getElementById(
+            "version"
+        ).innerText =
+            data.version;
+
+
+        document.getElementById(
+            "hostname"
+        ).innerText =
+            data.hostname;
+
+
+        document.getElementById(
+            "total"
+        ).innerText =
+            data.metrics.total_requests;
+
+
+        document.getElementById(
+            "success"
+        ).innerText =
+            data.metrics.successful_requests;
+
+
+        document.getElementById(
+            "failed"
+        ).innerText =
+            data.metrics.failed_requests;
+
+
+        document.getElementById(
+            "uptime"
+        ).innerText =
+            data.uptime_seconds + " sec";
+
+    }
+
+    catch (error) {
+
+        document.getElementById(
+            "status"
+        ).innerText =
+            "UNAVAILABLE";
+
+    }
+
+}
+
+
+async function normalRequest() {
+
+    await fetch(
+        "/api/request",
+        {
+            method: "POST"
+        }
+    );
+
+    addEvent(
+        "Successful request processed"
+    );
+
+    updateStatus();
+
+}
+
+
+async function errorRequest() {
+
+    const response =
+        await fetch(
+            "/api/error",
+            {
+                method: "POST"
+            }
+        );
+
+
+    if (!response.ok) {
+
+        addEvent(
+            "ERROR - HTTP 500 simulated"
+        );
+
+    }
+
+    updateStatus();
+
+}
+
+
+async function slowRequest() {
+
+    addEvent(
+        "Slow request started..."
+    );
+
+
+    await fetch(
+        "/api/slow",
+        {
+            method: "POST"
+        }
+    );
+
+
+    addEvent(
+        "Slow request completed after 5 seconds"
+    );
+
+    updateStatus();
+
+}
+
+
+updateStatus();
+
+
+setInterval(
+    updateStatus,
+    5000
+);
+
+
+</script>
+
+
+</body>
+
+</html>
